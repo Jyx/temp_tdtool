@@ -7,7 +7,6 @@
 ################################################################################
 use strict;
 use warnings;
-use Switch;
 use RRDs;
 
 # The ID's of the sensors that you are interested in. If you add remove these,
@@ -34,29 +33,22 @@ foreach my $line (@tdtool_data) {
 	# invalid line from tdtool (humidity for example).
 	next if (not defined $sensor and not defined $temp);
 
-	switch ($sensor) {
-		case ($UPPER) { $temps{$UPPER} = $temp; }
-		case ($DOWN) { $temps{$DOWN} = $temp; }
-		case ($OUT) { $temps{$OUT} = $temp; }
-	}
+	# It doesn't matter that we store values from other sensors in the hash,
+	# since we right after check for just the sensors that we are interested
+	# in.
+	$temps{$sensor} = $temp;
 
 	# When all sensors has a valid value, we update the rrd database, and
 	# then immediately exit since we are done with out job.
 	if ($temps{$UPPER} ne "NaN" and
 	    $temps{$DOWN} ne "NaN" and
 	    $temps{$OUT} ne "NaN") {
-		my $time;
-		$time = `date +%s`; # Seconds since 1970-01-01 00:00:00 UTC
-		chomp($time);
 		# The order here is VERY important, it must match the same as
 		# the rrd-database.
-		# print "$time $temps{$DOWN}:$temps{$UPPER}:$temps{$OUT}\n";
-		RRDs::update($RRD_DB, "$time:$temps{$DOWN}:$temps{$UPPER}:$temps{$OUT}");
-		my $err=RRDs::error;
-		if ($err) {
-			{print "problem generating the graph: $err\n";}
-			exit;
-		}
+		#print time() . " $temps{$DOWN}:$temps{$UPPER}:$temps{$OUT}\n";
+		RRDs::update($RRD_DB, time() . ":$temps{$DOWN}:$temps{$UPPER}:$temps{$OUT}");
+		my $err = RRDs::error;
+		print "problem generating the graph: $err\n" if $err;
 		exit
 	}
 }
